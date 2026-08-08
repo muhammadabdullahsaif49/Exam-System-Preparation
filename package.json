@@ -1,0 +1,10 @@
+{
+  "name": "online-exam-system",
+  "version": "2.0.0",
+  "description": "Online Examination System - zero-dependency Node.js version (no npm install needed)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "license": "MIT"
+}
