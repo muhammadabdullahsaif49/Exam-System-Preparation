@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Exam form · ExamHall</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css" />
+<style>
+.question-section { margin-top: 8px; }
+.subject-questions-block { border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; margin-bottom: 12px; background: var(--paper); }
+.subject-questions-block h4 { margin: 0 0 12px; font-family: var(--font-mono); font-size: .85rem; color: var(--gold-dark); text-transform: uppercase; letter-spacing: .06em; display:flex; align-items:center; gap:8px; }
+.subject-questions-block h4 .q-count { background: var(--gold); color: var(--ink); border-radius: 20px; padding: 1px 8px; font-size:.75rem; }
+.select-all-row { display:flex; align-items:center; gap:8px; margin-bottom:8px; font-size:.85rem; color:var(--graphite-60); }
+.select-all-row input { width:auto; }
+.subject-questions-block__head { display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
+.subject-questions-block__head h4 { margin:0; }
+.add-q-inline { background:none; border:1px dashed var(--gold-dark); color:var(--gold-dark); border-radius:20px; padding:2px 10px; font-size:.72rem; font-family:var(--font-mono); cursor:pointer; }
+.add-q-inline:hover { background:var(--gold); color:var(--ink); border-style:solid; }
+</style>
+</head>
+<body>
+<header class="site-header" id="site-header"></header>
+<main class="page">
+  <div class="page-head">
+    <div>
+      <span class="eyebrow">Admin</span>
+      <h1 id="page-title">Create Exam</h1>
+    </div>
+    <a class="btn btn--outline" href="/admin-exams.html">Back to exams</a>
+  </div>
+
+  <div class="card page--medium" style="margin: 0 auto;">
+    <div id="error-box" class="form-alert" style="display:none;"></div>
+
+    <form id="exam-form">
+      <div class="field"><label for="title">Exam title</label><input type="text" id="title" required /></div>
+      <div class="field"><label for="description">Description</label><textarea id="description"></textarea></div>
+
+      <div class="field">
+        <label for="subject">Subject</label>
+        <input type="text" id="subject" list="subjects-datalist" placeholder="Pick or type a subject" required />
+        <datalist id="subjects-datalist"></datalist>
+        <div class="hint">Choose an existing subject, or type a new one. <a href="/admin-subjects.html">Manage subjects</a></div>
+      </div>
+
+      <div class="field">
+        <label for="difficulty">Difficulty level</label>
+        <select id="difficulty">
+          <option value="Easy">Easy</option>
+          <option value="Medium" selected>Medium</option>
+          <option value="Hard">Hard</option>
+        </select>
+      </div>
+
+      <div class="field"><label for="duration_minutes">Duration (minutes)</label><input type="number" id="duration_minutes" min="1" value="30" required /></div>
+
+      <div class="field">
+        <label style="display:flex; align-items:center; gap:8px; font-weight:500;">
+          <input type="checkbox" id="is_published" style="width:auto;" />
+          Published (visible to students)
+        </label>
+      </div>
+
+      <div class="field">
+        <label>Questions <span id="selected-count" class="hint"></span></label>
+
+        <div class="builder-toolbar">
+          <input type="search" id="question-search" placeholder="Search questions by text…" />
+          <button type="button" class="btn btn--outline btn--sm" id="btn-open-add-question">+ Add new question</button>
+        </div>
+
+        <div id="questions-loading" style="color:var(--graphite-60); font-size:.9rem; padding:12px 0;">Loading questions…</div>
+        <div id="question-section" class="question-section" style="display:none;"></div>
+        <p class="hint" id="no-questions-hint" style="display:none;">No questions found yet. Use "+ Add new question" above to create your first one.</p>
+        <p class="hint" id="edit-mode-hint" style="display:none;">Existing questions for this exam are pre-checked below — untick to remove, tick more to add, or use "+ Add new question" to create fresh ones.</p>
+
+        <div class="selection-bar">
+          <span><strong id="selection-bar-count">0</strong> question(s) selected for this exam</span>
+          <div class="selection-bar__actions">
+            <button type="button" class="btn btn--outline btn--sm" id="btn-clear-selection" style="background:transparent;color:#fff;border-color:rgba(255,255,255,.3);">Clear selection</button>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn btn--gold btn--block" type="submit" id="save-btn">Save exam</button>
+    </form>
+  </div>
+</main>
+<footer class="site-footer"><span>ExamHall — Online Examination System</span></footer>
+
+<!-- Quick add-question modal -->
+<div class="modal-overlay" id="add-question-modal" style="display:none;">
+  <div class="modal-box">
+    <div class="modal-box__head">
+      <h3>Add a new question</h3>
+      <button type="button" class="modal-box__close" id="modal-close-btn" aria-label="Close">&times;</button>
+    </div>
+    <p class="modal-box__subtitle">This question is saved to your question bank and auto-selected for this exam — no need to leave the page.</p>
+
+    <div id="modal-error-box" class="form-alert" style="display:none;"></div>
+
+    <form id="modal-question-form">
+      <div class="field">
+        <label for="mq-question_text">Question</label>
+        <textarea id="mq-question_text" required></textarea>
+      </div>
+      <div class="field"><label for="mq-option_a">Option A</label><input type="text" id="mq-option_a" required /></div>
+      <div class="field"><label for="mq-option_b">Option B</label><input type="text" id="mq-option_b" required /></div>
+      <div class="field"><label for="mq-option_c">Option C</label><input type="text" id="mq-option_c" required /></div>
+      <div class="field"><label for="mq-option_d">Option D</label><input type="text" id="mq-option_d" required /></div>
+      <div class="field">
+        <label for="mq-correct_option">Correct option</label>
+        <select id="mq-correct_option" required>
+          <option value="">Select the correct option…</option>
+          <option value="A">A</option>
+          <option value="B">B</option>
+          <option value="C">C</option>
+          <option value="D">D</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="mq-category">Subject</label>
+        <input type="text" id="mq-category" list="subjects-datalist" required />
+        <div class="hint">Defaults to this exam's subject — change it if needed.</div>
+      </div>
+      <div class="field">
+        <label for="mq-difficulty">Difficulty</label>
+        <select id="mq-difficulty">
+          <option value="Easy">Easy</option>
+          <option value="Medium" selected>Medium</option>
+          <option value="Hard">Hard</option>
+        </select>
+      </div>
+      <div style="display:flex; gap:10px; margin-top:6px;">
+        <button type="submit" class="btn btn--gold" id="modal-save-btn" style="flex:1;">Save &amp; add to exam</button>
+        <button type="button" class="btn btn--outline" id="modal-cancel-btn">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="/api.js"></script>
+<script>
+  (async () => {
+    const me = await initPage('admin');
+    if (!me) return;
+
+    const params = new URLSearchParams(window.location.search);
+    const examId = params.get('id');
+    const prefillSubject = params.get('subject');
+
+    const { subjects } = await apiGet('/api/subjects');
+    document.getElementById('subjects-datalist').innerHTML = subjects.map((s) => `<option value="${escapeHtml(s.name)}"></option>`).join('');
+
+    let selectedIds = [];
+    let existingExamSubject = null;
+
+    if (examId) {
+      document.getElementById('page-title').textContent = 'Edit Exam';
+      document.getElementById('edit-mode-hint').style.display = 'block';
+      const { exam } = await apiGet(`/api/admin/exams/${examId}`);
+      document.getElementById('title').value = exam.title;
+      document.getElementById('description').value = exam.description;
+      document.getElementById('subject').value = exam.subject || '';
+      document.getElementById('difficulty').value = exam.difficulty || 'Medium';
+      document.getElementById('duration_minutes').value = exam.duration_minutes;
+      document.getElementById('is_published').checked = exam.is_published;
+      selectedIds = exam.question_ids.map(Number);
+      existingExamSubject = exam.subject;
+    } else if (prefillSubject) {
+      document.getElementById('subject').value = prefillSubject;
+    }
+
+    const sectionEl = document.getElementById('question-section');
+    const loadingEl = document.getElementById('questions-loading');
+    const noQHint = document.getElementById('no-questions-hint');
+    const selectedCountEl = document.getElementById('selected-count');
+
+    let allQuestions = [];
+    let searchTerm = '';
+    const selectionBarCountEl = document.getElementById('selection-bar-count');
+
+    function updateCount() {
+      const n = sectionEl.querySelectorAll('input[type=checkbox]:checked').length;
+      selectedCountEl.textContent = `— ${n} selected`;
+      selectionBarCountEl.textContent = String(n);
+    }
+
+    // Keep the running set of checked IDs so filtering/searching never drops a selection
+    function syncSelectedIdsFromDom() {
+      selectedIds = Array.from(sectionEl.querySelectorAll('input[type=checkbox]:checked')).map((cb) => Number(cb.value));
+    }
+
+    async function loadAllQuestions(preserveSelection) {
+      if (preserveSelection) syncSelectedIdsFromDom();
+      loadingEl.style.display = 'block';
+      sectionEl.style.display = 'none';
+      noQHint.style.display = 'none';
+
+      const { questions } = await apiGet('/api/admin/questions');
+      allQuestions = questions;
+      renderQuestionList();
+    }
+
+    function renderQuestionList() {
+      let questions = allQuestions;
+      if (searchTerm) {
+        const t = searchTerm.toLowerCase();
+        questions = questions.filter((q) => q.question_text.toLowerCase().includes(t) || q.category.toLowerCase().includes(t));
+      }
+
+      if (allQuestions.length === 0) {
+        loadingEl.style.display = 'none';
+        sectionEl.style.display = 'none';
+        noQHint.style.display = 'block';
+        updateCount();
+        return;
+      }
+
+      if (questions.length === 0) {
+        loadingEl.style.display = 'none';
+        sectionEl.style.display = 'block';
+        sectionEl.innerHTML = `<div class="empty-block">No questions match "${escapeHtml(searchTerm)}".</div>`;
+        updateCount();
+        return;
+      }
+
+      // Group by category
+      const byCategory = {};
+      questions.forEach((q) => {
+        if (!byCategory[q.category]) byCategory[q.category] = [];
+        byCategory[q.category].push(q);
+      });
+
+      const currentSubject = document.getElementById('subject').value.trim();
+      // Sort categories: current subject first
+      const cats = Object.keys(byCategory).sort((a, b) => {
+        if (a === currentSubject) return -1;
+        if (b === currentSubject) return 1;
+        return a.localeCompare(b);
+      });
+
+      sectionEl.innerHTML = cats.map((cat) => {
+        const qs = byCategory[cat];
+        const catSelected = qs.filter(q => selectedIds.includes(q.id)).length;
+        return `
+          <div class="subject-questions-block">
+            <div class="subject-questions-block__head">
+              <h4>
+                ${escapeHtml(cat)}
+                <span class="q-count">${qs.length} Qs</span>
+                ${catSelected > 0 ? `<span class="q-count" style="background:var(--green-bg);color:var(--green);">${catSelected} selected</span>` : ''}
+              </h4>
+              <button type="button" class="add-q-inline" data-cat="${escapeHtml(cat)}">+ Add question here</button>
+            </div>
+            <div class="select-all-row">
+              <input type="checkbox" class="select-all-cb" data-cat="${escapeHtml(cat)}" id="sa-${escapeHtml(cat)}" />
+              <label for="sa-${escapeHtml(cat)}">Select all in this subject</label>
+            </div>
+            <div class="checkbox-grid">
+              ${qs.map((q) => `
+                <label class="checkbox-row">
+                  <input type="checkbox" class="q-cb" value="${q.id}" data-cat="${escapeHtml(q.category)}" ${selectedIds.includes(q.id) ? 'checked' : ''} />
+                  <span>${escapeHtml(q.question_text)}<br /><span class="cat-tag">${escapeHtml(q.category)} · ${escapeHtml(q.difficulty)}</span></span>
+                </label>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      // Select-all binding
+      sectionEl.querySelectorAll('.select-all-cb').forEach((sadb) => {
+        const catName = sadb.dataset.cat;
+        const catCbs = () => sectionEl.querySelectorAll(`.q-cb[data-cat="${catName}"]`);
+        sadb.checked = [...catCbs()].every(c => c.checked);
+        sadb.addEventListener('change', () => {
+          catCbs().forEach(c => c.checked = sadb.checked);
+          updateCount();
+        });
+      });
+
+      sectionEl.querySelectorAll('.q-cb').forEach((cb) => {
+        cb.addEventListener('change', () => {
+          const catName = cb.dataset.cat;
+          const allCbs = sectionEl.querySelectorAll(`.q-cb[data-cat="${catName}"]`);
+          const saCb = sectionEl.querySelector(`.select-all-cb[data-cat="${catName}"]`);
+          if (saCb) saCb.checked = [...allCbs].every(c => c.checked);
+          updateCount();
+        });
+      });
+
+      sectionEl.querySelectorAll('.add-q-inline').forEach((btn) => {
+        btn.addEventListener('click', () => openAddQuestionModal(btn.dataset.cat));
+      });
+
+      loadingEl.style.display = 'none';
+      sectionEl.style.display = 'block';
+      updateCount();
+    }
+
+    await loadAllQuestions();
+
+    // Warn before leaving the page with unsaved changes
+    let formTouched = false;
+    let formSubmitted = false;
+    document.getElementById('exam-form').addEventListener('input', () => { formTouched = true; });
+    document.getElementById('exam-form').addEventListener('change', () => { formTouched = true; });
+    window.addEventListener('beforeunload', (e) => {
+      if (formTouched && !formSubmitted) { e.preventDefault(); e.returnValue = ''; }
+    });
+
+    // Reload when subject changes (to reorder categories)
+    document.getElementById('subject').addEventListener('change', () => loadAllQuestions(true));
+
+    document.getElementById('question-search').addEventListener('input', (e) => {
+      syncSelectedIdsFromDom();
+      searchTerm = e.target.value.trim();
+      renderQuestionList();
+    });
+
+    document.getElementById('btn-clear-selection').addEventListener('click', () => {
+      sectionEl.querySelectorAll('input[type=checkbox]:checked').forEach((cb) => { cb.checked = false; });
+      selectedIds = [];
+      updateCount();
+    });
+
+    // ---- Quick "add new question" modal ----
+    const modalEl = document.getElementById('add-question-modal');
+    const modalForm = document.getElementById('modal-question-form');
+    const modalErrorBox = document.getElementById('modal-error-box');
+
+    function openAddQuestionModal(prefillCategory) {
+      modalForm.reset();
+      modalErrorBox.style.display = 'none';
+      const subjectVal = (prefillCategory || document.getElementById('subject').value || '').trim();
+      document.getElementById('mq-category').value = subjectVal;
+      document.getElementById('mq-difficulty').value = 'Medium';
+      modalEl.style.display = 'flex';
+      document.getElementById('mq-question_text').focus();
+    }
+
+    function closeAddQuestionModal() {
+      modalEl.style.display = 'none';
+    }
+
+    document.getElementById('btn-open-add-question').addEventListener('click', () => openAddQuestionModal());
+    document.getElementById('modal-close-btn').addEventListener('click', closeAddQuestionModal);
+    document.getElementById('modal-cancel-btn').addEventListener('click', closeAddQuestionModal);
+    modalEl.addEventListener('click', (e) => { if (e.target === modalEl) closeAddQuestionModal(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && modalEl.style.display !== 'none') closeAddQuestionModal(); });
+
+    modalForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      modalErrorBox.style.display = 'none';
+      syncSelectedIdsFromDom();
+
+      const payload = {
+        question_text: document.getElementById('mq-question_text').value,
+        option_a: document.getElementById('mq-option_a').value,
+        option_b: document.getElementById('mq-option_b').value,
+        option_c: document.getElementById('mq-option_c').value,
+        option_d: document.getElementById('mq-option_d').value,
+        correct_option: document.getElementById('mq-correct_option').value,
+        category: document.getElementById('mq-category').value,
+        difficulty: document.getElementById('mq-difficulty').value,
+      };
+
+      const btn = document.getElementById('modal-save-btn');
+      btn.disabled = true;
+      btn.textContent = 'Saving…';
+
+      try {
+        const { question } = await apiPost('/api/admin/questions', payload);
+        // Refresh subject datalist in case a brand-new subject was typed
+        const { subjects } = await apiGet('/api/subjects');
+        document.getElementById('subjects-datalist').innerHTML = subjects.map((s) => `<option value="${escapeHtml(s.name)}"></option>`).join('');
+
+        selectedIds.push(question.id);
+        searchTerm = '';
+        document.getElementById('question-search').value = '';
+        await loadAllQuestions();
+        closeAddQuestionModal();
+        showToast('Question added and included in this exam.', 'success');
+      } catch (err) {
+        modalErrorBox.textContent = err.message;
+        modalErrorBox.style.display = 'block';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Save & add to exam';
+      }
+    });
+
+    document.getElementById('exam-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const errorBox = document.getElementById('error-box');
+      errorBox.style.display = 'none';
+
+      const question_ids = Array.from(sectionEl.querySelectorAll('input[type=checkbox]:checked')).map((cb) => Number(cb.value));
+
+      const payload = {
+        title: document.getElementById('title').value,
+        description: document.getElementById('description').value,
+        subject: document.getElementById('subject').value,
+        difficulty: document.getElementById('difficulty').value,
+        duration_minutes: document.getElementById('duration_minutes').value,
+        is_published: document.getElementById('is_published').checked,
+        question_ids,
+      };
+
+      const btn = document.getElementById('save-btn');
+      btn.disabled = true;
+      btn.textContent = 'Saving…';
+
+      try {
+        if (examId) {
+          await apiPut(`/api/admin/exams/${examId}`, payload);
+        } else {
+          await apiPost('/api/admin/exams', payload);
+        }
+        formSubmitted = true;
+        showToast(examId ? 'Exam updated successfully.' : 'Exam created successfully.', 'success');
+        setTimeout(() => { window.location.href = '/admin-exams.html'; }, 500);
+      } catch (err) {
+        errorBox.textContent = err.message;
+        errorBox.style.display = 'block';
+        showToast(err.message, 'error');
+        btn.disabled = false;
+        btn.textContent = 'Save exam';
+      }
+    });
+  })();
+</script>
+</body>
+</html>

@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MCQ Sets · ExamHall</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css" />
+<style>
+.upload-zone { border: 2px dashed var(--line); border-radius: var(--radius); padding: 32px; text-align: center; cursor: pointer; transition: border-color .2s, background .2s; }
+.upload-zone:hover, .upload-zone.drag-over { border-color: var(--gold); background: rgba(201,154,61,.06); }
+.upload-zone p { margin: 8px 0 0; color: var(--graphite-60); font-size: .9rem; }
+.q-preview { border: 1px solid var(--line); border-radius: 6px; padding: 10px 14px; margin-bottom: 8px; background: var(--paper); }
+.q-preview__num { font-family: var(--font-mono); font-size: .75rem; color: var(--gold-dark); font-weight: 600; margin-bottom: 4px; }
+.q-preview__text { font-weight: 500; color: var(--ink); margin-bottom: 6px; }
+.q-preview__opts { display: flex; gap: 8px; flex-wrap: wrap; font-size: .82rem; color: var(--graphite-60); }
+.q-preview__opts span.correct { color: var(--green); font-weight: 600; }
+.steps { display: flex; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
+.step { flex: 1; min-width: 160px; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; }
+.step__num { font-family: var(--font-mono); font-size: .72rem; color: var(--gold-dark); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 4px; }
+.step__text { font-size: .88rem; color: var(--graphite); }
+#parse-status { padding: 10px 14px; border-radius: 6px; font-size: .9rem; display: none; }
+#parse-status.ok { background: var(--green-bg); color: var(--green); display: block; }
+#parse-status.err { background: var(--red-bg); color: var(--red); display: block; }
+</style>
+</head>
+<body>
+<header class="site-header" id="site-header"></header>
+<main class="page">
+  <div class="page-head">
+    <div>
+      <span class="eyebrow">Admin</span>
+      <h1>MCQ Sets</h1>
+      <p>Upload a PDF or paste MCQs — students can practice them as a quiz.</p>
+    </div>
+  </div>
+
+  <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start;" class="two-col">
+
+    <!-- Left: Create new set -->
+    <div class="card">
+      <h2 style="margin-bottom:18px;">Add New MCQ Set</h2>
+
+      <div class="steps">
+        <div class="step"><div class="step__num">Step 1</div><div class="step__text">Fill title & subject</div></div>
+        <div class="step"><div class="step__num">Step 2</div><div class="step__text">Paste MCQs or upload PDF text</div></div>
+        <div class="step"><div class="step__num">Step 3</div><div class="step__text">Preview & save</div></div>
+      </div>
+
+      <div id="error-box" class="form-alert" style="display:none;"></div>
+
+      <div class="field"><label for="set-title">Set title</label><input type="text" id="set-title" placeholder="e.g. Chapter 3 Practice MCQs" /></div>
+      <div class="field">
+        <label for="set-subject">Subject</label>
+        <input type="text" id="set-subject" list="subjects-dl" placeholder="Pick or type" />
+        <datalist id="subjects-dl"></datalist>
+      </div>
+      <div class="field"><label for="set-desc">Description (optional)</label><textarea id="set-desc" rows="2" placeholder="Brief description for students…"></textarea></div>
+
+      <div class="field">
+        <label>MCQ Text</label>
+        <div class="upload-zone" id="upload-zone">
+          <div style="font-size: 2rem;">📄</div>
+          <strong>Upload PDF</strong> or drag &amp; drop
+          <p>PDF text will be extracted and parsed automatically</p>
+          <input type="file" id="pdf-input" accept=".pdf,.txt" style="display:none;" />
+        </div>
+        <div style="text-align:center; margin: 10px 0; color:var(--graphite-60); font-size:.85rem;">— or paste MCQ text directly —</div>
+        <textarea id="mcq-text" rows="10" placeholder="Paste your MCQs here in this format:
+
+1. What is HTML?
+A) Hyper Text Markup Language
+B) High Tech Modern Language
+C) Hyper Tool Markup Language
+D) None of above
+Answer: A
+
+2. Which of the following is a CSS property?
+A) color
+B) onclick
+C) src
+D) href
+Answer: A"></textarea>
+        <div class="hint">Supported format: numbered questions with A/B/C/D options and Answer: X line.</div>
+      </div>
+
+      <div id="parse-status"></div>
+
+      <div style="display:flex; gap:10px; margin-top:16px;">
+        <button class="btn btn--outline" id="parse-btn">Parse &amp; Preview</button>
+        <button class="btn btn--gold" id="save-set-btn" disabled>Save MCQ Set</button>
+      </div>
+    </div>
+
+    <!-- Right: Preview + existing sets -->
+    <div>
+      <div class="card" id="preview-card" style="display:none; margin-bottom:16px;">
+        <h3 id="preview-title" style="margin-bottom:12px;"></h3>
+        <div id="preview-list"></div>
+      </div>
+
+      <div class="card">
+        <h2 style="margin-bottom:16px;">Your MCQ Sets</h2>
+        <div id="sets-list"><p style="color:var(--graphite-60);">Loading…</p></div>
+      </div>
+    </div>
+  </div>
+</main>
+<footer class="site-footer"><span>ExamHall — Online Examination System</span></footer>
+
+<script src="/api.js"></script>
+<script>
+(async () => {
+  const me = await initPage('admin');
+  if (!me) return;
+
+  // Load subjects
+  const { subjects } = await apiGet('/api/subjects');
+  document.getElementById('subjects-dl').innerHTML = subjects.map(s => `<option value="${escapeHtml(s.name)}"></option>`).join('');
+
+  // Upload zone
+  const uploadZone = document.getElementById('upload-zone');
+  const pdfInput = document.getElementById('pdf-input');
+  uploadZone.addEventListener('click', () => pdfInput.click());
+  uploadZone.addEventListener('dragover', (e) => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+  uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+  uploadZone.addEventListener('drop', (e) => { e.preventDefault(); uploadZone.classList.remove('drag-over'); handleFile(e.dataTransfer.files[0]); });
+  pdfInput.addEventListener('change', () => handleFile(pdfInput.files[0]));
+
+  async function handleFile(file) {
+    if (!file) return;
+    if (file.type === 'text/plain') {
+      const text = await file.text();
+      document.getElementById('mcq-text').value = text;
+      return;
+    }
+    // PDF: use FileReader to read as text (browser can't parse PDF natively, so extract via text)
+    // For true PDF parsing we'd need a server endpoint; here we tell user to copy-paste
+    // But we'll try to use pdf.js from CDN for client-side extraction
+    const status = document.getElementById('parse-status');
+    status.className = 'err';
+    status.textContent = 'PDF ko directly paste nahi kar sakte. PDF kholen, Ctrl+A se sab select karen, aur MCQ text box mein paste karen. Ya .txt file upload karen.';
+    status.style.display = 'block';
+  }
+
+  // Parse MCQ text
+  let parsedQuestions = [];
+
+  document.getElementById('parse-btn').addEventListener('click', () => {
+    const text = document.getElementById('mcq-text').value.trim();
+    const status = document.getElementById('parse-status');
+    if (!text) {
+      status.className = 'err';
+      status.textContent = 'Pehle MCQ text paste karen ya upload karen.';
+      status.style.display = 'block';
+      return;
+    }
+    parsedQuestions = parseMCQText(text);
+    if (parsedQuestions.length === 0) {
+      status.className = 'err';
+      status.textContent = 'Koi valid MCQ nahi mila. Format check karen: numbered questions, A/B/C/D options, aur "Answer: X" line.';
+      status.style.display = 'block';
+      document.getElementById('save-set-btn').disabled = true;
+      return;
+    }
+    status.className = 'ok';
+    status.textContent = `✓ ${parsedQuestions.length} MCQ parse ho gaye. Ab "Save MCQ Set" press karen.`;
+    status.style.display = 'block';
+    showPreview();
+    document.getElementById('save-set-btn').disabled = false;
+  });
+
+  function parseMCQText(text) {
+    const questions = [];
+    // Split on question numbers: "1." or "1)" at line start
+    const blocks = text.split(/\n(?=\s*\d+[\.\)]\s)/);
+    blocks.forEach((block) => {
+      block = block.trim();
+      if (!block) return;
+      const lines = block.split('\n').map(l => l.trim()).filter(Boolean);
+      if (lines.length < 3) return;
+
+      // First line: question text (remove leading number)
+      const qLine = lines[0].replace(/^\d+[\.\)]\s*/, '').trim();
+      if (!qLine) return;
+
+      const opts = {};
+      let answer = null;
+
+      lines.slice(1).forEach(line => {
+        const optMatch = line.match(/^([A-Da-d])[\.\)]\s*(.+)/);
+        if (optMatch) {
+          opts[optMatch[1].toUpperCase()] = optMatch[2].trim();
+        }
+        const ansMatch = line.match(/^(?:Answer|Ans|Correct)[:\s]+([A-Da-d])/i);
+        if (ansMatch) {
+          answer = ansMatch[1].toUpperCase();
+        }
+      });
+
+      if (opts.A && opts.B && opts.C && opts.D && answer) {
+        questions.push({ question_text: qLine, option_a: opts.A, option_b: opts.B, option_c: opts.C, option_d: opts.D, correct_option: answer });
+      }
+    });
+    return questions;
+  }
+
+  function showPreview() {
+    const card = document.getElementById('preview-card');
+    const title = document.getElementById('preview-title');
+    const list = document.getElementById('preview-list');
+    card.style.display = 'block';
+    title.textContent = `Preview — ${parsedQuestions.length} questions`;
+    list.innerHTML = parsedQuestions.slice(0, 10).map((q, i) => `
+      <div class="q-preview">
+        <div class="q-preview__num">Q${i + 1}</div>
+        <div class="q-preview__text">${escapeHtml(q.question_text)}</div>
+        <div class="q-preview__opts">
+          <span class="${q.correct_option === 'A' ? 'correct' : ''}">A. ${escapeHtml(q.option_a)}</span>
+          <span class="${q.correct_option === 'B' ? 'correct' : ''}">B. ${escapeHtml(q.option_b)}</span>
+          <span class="${q.correct_option === 'C' ? 'correct' : ''}">C. ${escapeHtml(q.option_c)}</span>
+          <span class="${q.correct_option === 'D' ? 'correct' : ''}">D. ${escapeHtml(q.option_d)}</span>
+        </div>
+      </div>
+    `).join('') + (parsedQuestions.length > 10 ? `<p style="color:var(--graphite-60); font-size:.85rem;">…aur ${parsedQuestions.length - 10} aur questions</p>` : '');
+  }
+
+  // Save
+  document.getElementById('save-set-btn').addEventListener('click', async () => {
+    const title = document.getElementById('set-title').value.trim();
+    const subject = document.getElementById('set-subject').value.trim();
+    const errorBox = document.getElementById('error-box');
+    errorBox.style.display = 'none';
+
+    if (!title || !subject) {
+      errorBox.textContent = 'Title aur subject dono zaruri hain.';
+      errorBox.style.display = 'block';
+      return;
+    }
+    if (parsedQuestions.length === 0) {
+      errorBox.textContent = 'Pehle MCQ parse karen.';
+      errorBox.style.display = 'block';
+      return;
+    }
+
+    const btn = document.getElementById('save-set-btn');
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
+
+    try {
+      await apiPost('/api/admin/mcq-sets', { title, subject, description: document.getElementById('set-desc').value.trim(), questions: parsedQuestions });
+      document.getElementById('mcq-text').value = '';
+      document.getElementById('set-title').value = '';
+      document.getElementById('set-desc').value = '';
+      document.getElementById('preview-card').style.display = 'none';
+      parsedQuestions = [];
+      document.getElementById('parse-status').style.display = 'none';
+      btn.disabled = true;
+      btn.textContent = 'Save MCQ Set';
+      loadSets();
+    } catch (err) {
+      errorBox.textContent = err.message;
+      errorBox.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = 'Save MCQ Set';
+    }
+  });
+
+  async function loadSets() {
+    const { mcq_sets } = await apiGet('/api/admin/mcq-sets');
+    const list = document.getElementById('sets-list');
+    if (!mcq_sets || mcq_sets.length === 0) {
+      list.innerHTML = '<p style="color:var(--graphite-60); font-size:.9rem;">Abhi tak koi MCQ set nahi banaya.</p>';
+      return;
+    }
+    list.innerHTML = mcq_sets.map(s => `
+      <div class="card" style="margin-bottom:10px; padding:16px;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px;">
+          <div>
+            <span class="pill pill--gold">${escapeHtml(s.subject)}</span>
+            <h3 style="margin:6px 0 2px;">${escapeHtml(s.title)}</h3>
+            <p style="font-size:.85rem; color:var(--graphite-60); margin:0;">${s.questions.length} questions${s.description ? ' · ' + escapeHtml(s.description) : ''}</p>
+            <p style="font-size:.75rem; color:var(--graphite-60); margin:4px 0 0;">${fmtDate(s.createdAt)}</p>
+          </div>
+          <button class="btn btn--danger btn--sm delete-set-btn" data-id="${s.id}">Delete</button>
+        </div>
+      </div>
+    `).join('');
+    list.querySelectorAll('.delete-set-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if (!confirm('Is MCQ set ko delete karen?')) return;
+        await apiDelete(`/api/admin/mcq-sets/${btn.dataset.id}`);
+        loadSets();
+      });
+    });
+  }
+
+  loadSets();
+})();
+</script>
+<style>
+@media (max-width: 700px) { .two-col { grid-template-columns: 1fr !important; } }
+</style>
+</body>
+</html>

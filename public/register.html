@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Create account · ExamHall</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+<header class="site-header" id="site-header"></header>
+<main class="page">
+  <div class="auth-shell">
+    <div class="card">
+      <span class="eyebrow" style="text-align:center; display:block;">ExamHall</span>
+      <h1>Create your account</h1>
+      <p class="subtitle">Register as a student to start taking tests.</p>
+
+      <div id="error-box" class="form-alert" style="display:none;"></div>
+
+      <form id="register-form">
+        <div class="field">
+          <label>I am registering as…</label>
+          <div class="btn-row" style="gap:10px;">
+            <label class="bubble-option" style="flex:1; cursor:pointer;">
+              <input type="radio" name="role" value="student" checked style="position:absolute; opacity:0;" />
+              <span class="bubble-option__letter">S</span>
+              <span class="bubble-option__text">Student</span>
+            </label>
+            <label class="bubble-option" style="flex:1; cursor:pointer;">
+              <input type="radio" name="role" value="teacher" style="position:absolute; opacity:0;" />
+              <span class="bubble-option__letter">T</span>
+              <span class="bubble-option__text">Teacher / Admin</span>
+            </label>
+          </div>
+          <div class="hint">Students take exams. Teachers manage the question bank and build quizzes.</div>
+        </div>
+        <div class="field">
+          <label for="name">Username</label>
+          <input type="text" id="name" required autofocus />
+        </div>
+        <div class="field">
+          <label for="email">Email</label>
+          <input type="email" id="email" required />
+        </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <input type="password" id="password" required minlength="6" />
+          <div class="hint">At least 6 characters.</div>
+        </div>
+        <div class="field">
+          <label for="confirm_password">Confirm password</label>
+          <input type="password" id="confirm_password" required minlength="6" />
+        </div>
+        <button class="btn btn--gold btn--block" type="submit" id="submit-btn">Create account</button>
+      </form>
+
+      <p class="auth-switch">Already registered? <a href="/login.html">Log in</a></p>
+      <p id="success-msg" class="hint" style="display:none; text-align:center; margin-top:10px;">Account created! Redirecting you to the login page…</p>
+    </div>
+  </div>
+</main>
+<footer class="site-footer"><span>ExamHall — Online Examination System</span></footer>
+
+<script src="/api.js"></script>
+<script>
+  initPage('guest');
+
+  document.querySelectorAll('input[name="role"]').forEach((input) => {
+    const sync = () => {
+      document.querySelectorAll('input[name="role"]').forEach((i) => i.closest('.bubble-option').classList.toggle('is-selected', i.checked));
+    };
+    input.addEventListener('change', sync);
+    sync();
+  });
+
+  document.getElementById('register-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const errorBox = document.getElementById('error-box');
+    errorBox.style.display = 'none';
+
+    const password = document.getElementById('password').value;
+    const confirm = document.getElementById('confirm_password').value;
+    if (password !== confirm) {
+      errorBox.textContent = 'Passwords do not match.';
+      errorBox.style.display = 'block';
+      return;
+    }
+
+    const role = document.querySelector('input[name="role"]:checked').value;
+    const submitBtn = document.getElementById('submit-btn');
+
+    try {
+      await apiPost('/api/register', {
+        name: document.getElementById('name').value,
+        email: document.getElementById('email').value,
+        password,
+        role,
+      });
+      // Registration no longer logs the user in automatically —
+      // send them to the login page so they log in themselves.
+      submitBtn.disabled = true;
+      document.getElementById('success-msg').style.display = 'block';
+      setTimeout(() => { window.location.href = '/login.html'; }, 1200);
+    } catch (err) {
+      errorBox.textContent = err.message;
+      errorBox.style.display = 'block';
+    }
+  });
+</script>
+</body>
+</html>

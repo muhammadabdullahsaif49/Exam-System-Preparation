@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>My Dashboard · ExamHall</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+<header class="site-header" id="site-header"></header>
+<main class="page">
+  <div class="page-head">
+    <div>
+      <span class="eyebrow">Student</span>
+      <h1>Available exams</h1>
+      <p>Pick a test below. Your timer starts the moment you begin.</p>
+    </div>
+  </div>
+
+  <div id="filter-section"></div>
+  <div id="exam-list"></div>
+  <div id="results-section"></div>
+</main>
+<footer class="site-footer"><span>ExamHall — Online Examination System</span></footer>
+
+<script src="/api.js"></script>
+<script>
+  (async () => {
+    const me = await initPage('student');
+    if (!me) return;
+
+    const params = new URLSearchParams(window.location.search);
+    let activeSubject = params.get('subject') || '';
+    let activeDifficulty = params.get('difficulty') || '';
+
+    async function load() {
+      const qs = new URLSearchParams();
+      if (activeSubject) qs.set('subject', activeSubject);
+      if (activeDifficulty) qs.set('difficulty', activeDifficulty);
+      const { exams, recentResults, availableSubjects, availableDifficulties } = await apiGet(`/api/exams?${qs.toString()}`);
+
+      const filterEl = document.getElementById('filter-section');
+      if (availableSubjects.length > 0) {
+        filterEl.innerHTML = `
+          <div class="filter-row">
+            <a href="#" class="filter-chip subject-chip ${activeSubject === '' ? 'is-active' : ''}" data-subject="">All subjects</a>
+            ${availableSubjects.map((s) => `<a href="#" class="filter-chip subject-chip ${activeSubject === s ? 'is-active' : ''}" data-subject="${escapeHtml(s)}">${escapeHtml(s)}</a>`).join('')}
+          </div>
+          <div class="filter-row" style="margin-bottom:24px;">
+            <a href="#" class="filter-chip diff-chip ${activeDifficulty === '' ? 'is-active' : ''}" data-difficulty="">All levels</a>
+            ${availableDifficulties.map((d) => `<a href="#" class="filter-chip diff-chip ${activeDifficulty === d ? 'is-active' : ''}" data-difficulty="${d}">${d}</a>`).join('')}
+          </div>
+        `;
+        filterEl.querySelectorAll('.subject-chip').forEach((chip) => {
+          chip.addEventListener('click', (e) => { e.preventDefault(); activeSubject = chip.dataset.subject; load(); });
+        });
+        filterEl.querySelectorAll('.diff-chip').forEach((chip) => {
+          chip.addEventListener('click', (e) => { e.preventDefault(); activeDifficulty = chip.dataset.difficulty; load(); });
+        });
+      } else {
+        filterEl.innerHTML = '';
+      }
+
+      const listEl = document.getElementById('exam-list');
+
+      if (exams.length === 0) {
+        listEl.innerHTML = `
+          <div class="card empty-state">
+            <h3>No exams found</h3>
+            <p>${activeSubject || activeDifficulty ? 'Try a different subject or difficulty level.' : 'Check back once your instructor publishes a test.'}</p>
+          </div>`;
+      } else {
+        listEl.innerHTML = exams.map((exam) => `
+          <div class="card exam-card">
+            <div>
+              <div style="margin-bottom:6px;">
+                <span class="pill pill--gold">${escapeHtml(exam.subject || 'General')}</span>
+                <span class="pill pill--gray">${escapeHtml(exam.difficulty || 'Medium')}</span>
+              </div>
+              <h3 style="margin-bottom:4px;">${escapeHtml(exam.title)}</h3>
+              <p style="margin:0; color:var(--graphite-60); max-width:520px;">${escapeHtml(exam.description)}</p>
+              <div class="exam-card__meta">
+                <span>${exam.question_count} questions</span>
+                <span>${exam.duration_minutes} min</span>
+                <span>${exam.attempts_taken} attempt${exam.attempts_taken === 1 ? '' : 's'} completed</span>
+              </div>
+            </div>
+            <div>
+              ${exam.active_attempt_id
+                ? `<a class="btn btn--gold" href="/exam.html?attempt=${exam.active_attempt_id}">Resume test</a>`
+                : `<button class="btn btn--gold start-btn" data-exam-id="${exam.id}">Start test</button>`}
+            </div>
+          </div>
+        `).join('');
+
+        listEl.querySelectorAll('.start-btn').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            btn.disabled = true;
+            btn.textContent = 'Starting…';
+            try {
+              const { attemptId } = await apiPost(`/api/exams/${btn.dataset.examId}/start`);
+              window.location.href = `/exam.html?attempt=${attemptId}`;
+            } catch (err) {
+              alert(err.message);
+              btn.disabled = false;
+              btn.textContent = 'Start test';
+            }
+          });
+        });
+      }
+
+      const resultsEl = document.getElementById('results-section');
+      if (recentResults.length > 0) {
+        resultsEl.innerHTML = `
+          <hr class="section-divider" />
+          <h2>Recent results</h2>
+          <div class="card">
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Exam</th><th class="numeric">Score</th><th>Date</th><th></th></tr></thead>
+                <tbody>
+                  ${recentResults.map((r) => `
+                    <tr>
+                      <td>${escapeHtml(r.title)}</td>
+                      <td class="numeric">${r.score} / ${r.total_marks}</td>
+                      <td>${fmtDate(r.end_time)}</td>
+                      <td><a class="btn btn--outline btn--sm" href="/result.html?attempt=${r.id}">View</a></td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>`;
+      } else {
+        resultsEl.innerHTML = '';
+      }
+    }
+
+    load();
+  })();
+</script>
+</body>
+</html>

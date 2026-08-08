@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MCQ Practice · ExamHall</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css" />
+<style>
+.subject-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; margin-bottom: 28px; }
+.subject-tile { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; cursor: pointer; transition: border-color .15s, transform .1s, box-shadow .15s; box-shadow: var(--shadow-card); }
+.subject-tile:hover { border-color: var(--gold); transform: translateY(-2px); box-shadow: 0 4px 16px rgba(30,42,68,.1); }
+.subject-tile.active { border-color: var(--gold); background: #FFFBF0; }
+.subject-tile__name { font-family: var(--font-display); font-size: 1.05rem; font-weight: 600; color: var(--ink); margin: 0 0 6px; }
+.subject-tile__meta { font-size: .82rem; color: var(--graphite-60); }
+
+/* Quiz mode */
+.quiz-wrap { max-width: 680px; margin: 0 auto; }
+.quiz-progress { font-family: var(--font-mono); font-size: .8rem; color: var(--graphite-60); margin-bottom: 6px; }
+.quiz-progress-bar { height: 4px; background: var(--line); border-radius: 2px; margin-bottom: 20px; }
+.quiz-progress-bar__fill { height: 100%; background: var(--gold); border-radius: 2px; transition: width .3s; }
+.quiz-question { font-size: 1.1rem; font-weight: 600; color: var(--ink); font-family: var(--font-display); margin-bottom: 20px; line-height: 1.4; }
+.quiz-options { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+.quiz-option { border: 2px solid var(--line); border-radius: 8px; padding: 12px 16px; cursor: pointer; display: flex; align-items: center; gap: 12px; transition: border-color .15s, background .15s; font-size: .95rem; }
+.quiz-option:hover:not(.answered) { border-color: var(--gold); background: rgba(201,154,61,.05); }
+.quiz-option.selected { border-color: var(--gold); background: rgba(201,154,61,.08); }
+.quiz-option.correct { border-color: var(--green); background: var(--green-bg); }
+.quiz-option.wrong { border-color: var(--red); background: var(--red-bg); }
+.quiz-option__key { font-family: var(--font-mono); font-weight: 700; font-size: .85rem; color: var(--graphite-60); width: 22px; flex-shrink: 0; }
+.quiz-feedback { padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; font-weight: 500; font-size: .9rem; }
+.quiz-feedback.correct { background: var(--green-bg); color: var(--green); }
+.quiz-feedback.wrong { background: var(--red-bg); color: var(--red); }
+.quiz-score-card { text-align: center; padding: 32px; }
+.quiz-score-card__num { font-family: var(--font-mono); font-size: 3rem; font-weight: 700; color: var(--ink); }
+.quiz-score-card__label { color: var(--graphite-60); margin-top: 4px; }
+.set-card { border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; margin-bottom: 10px; background: var(--card); display: flex; justify-content: space-between; align-items: center; gap: 12px; cursor: pointer; transition: border-color .15s; }
+.set-card:hover { border-color: var(--gold); }
+</style>
+</head>
+<body>
+<header class="site-header" id="site-header"></header>
+<main class="page">
+  <div id="view-subjects">
+    <div class="page-head">
+      <div>
+        <span class="eyebrow">Student</span>
+        <h1>MCQ Practice</h1>
+        <p>Subject select karen aur practice shuru karen.</p>
+      </div>
+      <a class="btn btn--outline" href="/index.html">← Exams</a>
+    </div>
+    <div id="subjects-grid" class="subject-grid"></div>
+
+    <div id="subject-content" style="display:none;">
+      <div class="page-head" style="margin-bottom:16px;">
+        <h2 id="active-subject-name"></h2>
+        <button class="btn btn--outline btn--sm" id="back-to-subjects">← Back</button>
+      </div>
+
+      <!-- MCQ Sets from teacher -->
+      <div id="mcq-sets-section" style="display:none;">
+        <h3 style="margin-bottom:12px; font-size:1rem; color:var(--graphite-60); font-family:var(--font-mono); text-transform:uppercase; letter-spacing:.05em;">Teacher's MCQ Sets</h3>
+        <div id="mcq-sets-list" style="margin-bottom:24px;"></div>
+      </div>
+
+      <!-- Practice all questions -->
+      <div id="bank-questions-section" style="display:none;">
+        <h3 style="margin-bottom:12px; font-size:1rem; color:var(--graphite-60); font-family:var(--font-mono); text-transform:uppercase; letter-spacing:.05em;">Question Bank Practice</h3>
+        <div class="card" style="display:flex; justify-content:space-between; align-items:center; gap:16px; margin-bottom:16px;">
+          <div>
+            <strong id="bank-q-count"></strong>
+            <p style="margin:4px 0 0; font-size:.85rem; color:var(--graphite-60);">Practice karo — answers reveal hote hain baad mein. Score final mein milega.</p>
+          </div>
+          <button class="btn btn--gold" id="start-bank-quiz">Start Practice Quiz</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quiz view -->
+  <div id="view-quiz" style="display:none;">
+    <div class="quiz-wrap">
+      <div class="page-head" style="margin-bottom:8px;">
+        <h2 id="quiz-title" style="margin:0;"></h2>
+        <button class="btn btn--outline btn--sm" id="quit-quiz">Quit</button>
+      </div>
+      <div class="quiz-progress" id="quiz-progress-text"></div>
+      <div class="quiz-progress-bar"><div class="quiz-progress-bar__fill" id="progress-fill"></div></div>
+
+      <div class="card" id="quiz-card">
+        <div class="quiz-question" id="quiz-q-text"></div>
+        <div class="quiz-options" id="quiz-options"></div>
+        <div id="quiz-feedback" class="quiz-feedback" style="display:none;"></div>
+        <div style="display:flex; justify-content:flex-end; margin-top:8px;">
+          <button class="btn btn--gold" id="next-btn" style="display:none;">Next →</button>
+        </div>
+      </div>
+
+      <!-- Score card -->
+      <div class="card quiz-score-card" id="quiz-score" style="display:none;">
+        <h2>Quiz Complete! 🎉</h2>
+        <div class="quiz-score-card__num" id="score-val"></div>
+        <div class="quiz-score-card__label" id="score-label"></div>
+        <div style="margin-top:24px; display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
+          <button class="btn btn--gold" id="retry-btn">Retry</button>
+          <button class="btn btn--outline" id="back-from-score">← Back to subjects</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+<footer class="site-footer"><span>ExamHall — Online Examination System</span></footer>
+
+<script src="/api.js"></script>
+<script>
+(async () => {
+  const me = await initPage('student');
+  if (!me) return;
+
+  let currentQuestions = [];
+  let currentIdx = 0;
+  let score = 0;
+  let answered = false;
+  let currentSetTitle = '';
+
+  // Load subjects
+  const { subjects } = await apiGet('/api/mcq-subjects');
+  const grid = document.getElementById('subjects-grid');
+
+  if (subjects.length === 0) {
+    grid.innerHTML = '<div class="card empty-state"><h3>Abhi koi subject available nahi</h3><p>Teacher ne abhi koi questions ya MCQ sets nahi banaye.</p></div>';
+  } else {
+    grid.innerHTML = subjects.map(s => `
+      <div class="subject-tile" data-name="${escapeHtml(s.name)}">
+        <div class="subject-tile__name">${escapeHtml(s.name)}</div>
+        <div class="subject-tile__meta">
+          ${s.question_count > 0 ? `${s.question_count} questions` : ''}
+          ${s.question_count > 0 && s.mcq_set_count > 0 ? ' · ' : ''}
+          ${s.mcq_set_count > 0 ? `${s.mcq_set_count} MCQ set${s.mcq_set_count === 1 ? '' : 's'}` : ''}
+        </div>
+      </div>
+    `).join('');
+
+    grid.querySelectorAll('.subject-tile').forEach(tile => {
+      tile.addEventListener('click', () => openSubject(tile.dataset.name));
+    });
+  }
+
+  async function openSubject(name) {
+    document.getElementById('active-subject-name').textContent = name;
+    const { questions, mcq_sets } = await apiGet(`/api/mcq-bank?subject=${encodeURIComponent(name)}`);
+
+    const setsSection = document.getElementById('mcq-sets-section');
+    const bankSection = document.getElementById('bank-questions-section');
+
+    if (mcq_sets.length > 0) {
+      setsSection.style.display = 'block';
+      document.getElementById('mcq-sets-list').innerHTML = mcq_sets.map(s => `
+        <div class="set-card" data-set-id="${s.id}">
+          <div>
+            <strong>${escapeHtml(s.title)}</strong>
+            <div style="font-size:.82rem; color:var(--graphite-60); margin-top:3px;">${s.question_count} questions${s.description ? ' · ' + escapeHtml(s.description) : ''}</div>
+          </div>
+          <span class="btn btn--outline btn--sm">Start Quiz →</span>
+        </div>
+      `).join('');
+      document.getElementById('mcq-sets-list').querySelectorAll('.set-card').forEach(card => {
+        card.addEventListener('click', () => startSetQuiz(card.dataset.setId));
+      });
+    } else {
+      setsSection.style.display = 'none';
+    }
+
+    if (questions.length > 0) {
+      bankSection.style.display = 'block';
+      document.getElementById('bank-q-count').textContent = `${questions.length} questions available`;
+      document.getElementById('start-bank-quiz').onclick = () => startQuiz(questions, `${name} — Practice`);
+    } else {
+      bankSection.style.display = 'none';
+    }
+
+    document.getElementById('subject-content').style.display = 'block';
+    grid.style.display = 'none';
+  }
+
+  async function startSetQuiz(setId) {
+    const { mcq_set } = await apiGet(`/api/mcq-sets/${setId}`);
+    startQuiz(mcq_set.questions, mcq_set.title);
+  }
+
+  function startQuiz(questions, title) {
+    // Shuffle
+    currentQuestions = questions.slice().sort(() => Math.random() - .5);
+    currentIdx = 0;
+    score = 0;
+    currentSetTitle = title;
+
+    document.getElementById('view-subjects').style.display = 'none';
+    document.getElementById('view-quiz').style.display = 'block';
+    document.getElementById('quiz-title').textContent = title;
+    document.getElementById('quiz-score').style.display = 'none';
+    document.getElementById('quiz-card').style.display = 'block';
+    showQuestion();
+  }
+
+  function showQuestion() {
+    if (currentIdx >= currentQuestions.length) {
+      showScore();
+      return;
+    }
+    answered = false;
+    const q = currentQuestions[currentIdx];
+    const total = currentQuestions.length;
+
+    document.getElementById('quiz-progress-text').textContent = `Question ${currentIdx + 1} of ${total}`;
+    document.getElementById('progress-fill').style.width = `${(currentIdx / total) * 100}%`;
+    document.getElementById('quiz-q-text').textContent = q.question_text;
+    document.getElementById('quiz-feedback').style.display = 'none';
+    document.getElementById('next-btn').style.display = 'none';
+
+    const opts = [
+      { key: 'A', text: q.option_a },
+      { key: 'B', text: q.option_b },
+      { key: 'C', text: q.option_c },
+      { key: 'D', text: q.option_d },
+    ];
+
+    document.getElementById('quiz-options').innerHTML = opts.map(o => `
+      <div class="quiz-option" data-key="${o.key}">
+        <span class="quiz-option__key">${o.key}</span>
+        <span>${escapeHtml(o.text)}</span>
+      </div>
+    `).join('');
+
+    document.querySelectorAll('.quiz-option').forEach(opt => {
+      opt.addEventListener('click', () => {
+        if (answered) return;
+        answered = true;
+        const selected = opt.dataset.key;
+        const correct = q.correct_option;
+
+        document.querySelectorAll('.quiz-option').forEach(o => o.classList.add('answered'));
+
+        if (selected === correct) {
+          opt.classList.add('correct');
+          score++;
+          const fb = document.getElementById('quiz-feedback');
+          fb.textContent = '✓ Sahi jawab!';
+          fb.className = 'quiz-feedback correct';
+          fb.style.display = 'block';
+        } else {
+          opt.classList.add('wrong');
+          const correctOpt = document.querySelector(`.quiz-option[data-key="${correct}"]`);
+          if (correctOpt) correctOpt.classList.add('correct');
+          const fb = document.getElementById('quiz-feedback');
+          fb.textContent = `✗ Galat. Sahi jawab: ${correct}`;
+          fb.className = 'quiz-feedback wrong';
+          fb.style.display = 'block';
+        }
+        document.getElementById('next-btn').style.display = 'inline-flex';
+      });
+    });
+  }
+
+  document.getElementById('next-btn').addEventListener('click', () => {
+    currentIdx++;
+    if (currentIdx >= currentQuestions.length) showScore();
+    else showQuestion();
+  });
+
+  function showScore() {
+    document.getElementById('quiz-card').style.display = 'none';
+    document.getElementById('quiz-score').style.display = 'block';
+    const pct = Math.round((score / currentQuestions.length) * 100);
+    document.getElementById('score-val').textContent = `${score} / ${currentQuestions.length}`;
+    document.getElementById('score-label').textContent = `${pct}% — ${pct >= 80 ? 'Shaabaash! 🌟' : pct >= 50 ? 'Acha kiya! Aur practice karo.' : 'Zyada practice karo. Aap kar sakte hain!'}`;
+    document.getElementById('progress-fill').style.width = '100%';
+    document.getElementById('quiz-progress-text').textContent = `Completed — ${currentQuestions.length} questions`;
+  }
+
+  document.getElementById('retry-btn').addEventListener('click', () => {
+    startQuiz(currentQuestions, currentSetTitle);
+  });
+
+  document.getElementById('back-from-score').addEventListener('click', backToSubjects);
+  document.getElementById('quit-quiz').addEventListener('click', backToSubjects);
+  document.getElementById('back-to-subjects').addEventListener('click', () => {
+    document.getElementById('subject-content').style.display = 'none';
+    grid.style.display = 'grid';
+  });
+
+  function backToSubjects() {
+    document.getElementById('view-quiz').style.display = 'none';
+    document.getElementById('view-subjects').style.display = 'block';
+    document.getElementById('subject-content').style.display = 'none';
+    grid.style.display = 'grid';
+  }
+})();
+</script>
+</body>
+</html>

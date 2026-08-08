@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Admin Dashboard · ExamHall</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+<header class="site-header" id="site-header"></header>
+<main class="page">
+  <div class="page-head">
+    <div>
+      <span class="eyebrow">Admin</span>
+      <h1>Dashboard</h1>
+      <p>Manage the question bank, build exams, and review results.</p>
+    </div>
+  </div>
+
+  <div class="stat-grid" id="stat-grid"></div>
+
+  <h2>Quick actions</h2>
+  <div class="btn-row" style="margin-bottom: 10px; flex-wrap:wrap;">
+    <a class="btn btn--outline" href="/admin-subjects.html">+ Add subject</a>
+    <a class="btn btn--outline" href="/admin-question-form.html">+ Add question</a>
+  </div>
+  <div class="btn-row" style="margin-bottom: 28px; flex-wrap:wrap;">
+    <a class="btn btn--gold" href="/admin-exam-form.html">+ Create exam</a>
+    <a class="btn btn--gold" href="/admin-mcq-sets.html">+ Create MCQ set (quiz)</a>
+  </div>
+
+  <h2>Recent attempts</h2>
+  <div id="recent-attempts"></div>
+</main>
+<footer class="site-footer"><span>ExamHall — Online Examination System</span></footer>
+
+<script src="/api.js"></script>
+<script>
+  (async () => {
+    const me = await initPage('admin');
+    if (!me) return;
+
+    const { stats, recentAttempts } = await apiGet('/api/admin/stats');
+
+    document.getElementById('stat-grid').innerHTML = `
+      <div class="stat-card"><span class="stat-card__value">${stats.questionCount}</span><span class="stat-card__label">Questions</span></div>
+      <div class="stat-card"><span class="stat-card__value">${stats.examCount}</span><span class="stat-card__label">Exams</span></div>
+      <div class="stat-card"><span class="stat-card__value">${stats.mcqSetCount}</span><span class="stat-card__label">MCQ Sets (Quizzes)</span></div>
+      <div class="stat-card"><span class="stat-card__value">${stats.studentCount}</span><span class="stat-card__label">Students</span></div>
+      <div class="stat-card"><span class="stat-card__value">${stats.attemptCount}</span><span class="stat-card__label">Completed attempts</span></div>
+    `;
+
+    const el = document.getElementById('recent-attempts');
+    if (recentAttempts.length === 0) {
+      el.innerHTML = `<div class="card empty-state"><h3>No attempts yet</h3><p>Results will appear here once students take a test.</p></div>`;
+      return;
+    }
+
+    el.innerHTML = `
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Student</th><th>Exam</th><th class="numeric">Score</th><th>Date</th></tr></thead>
+            <tbody>
+              ${recentAttempts.map((a) => `
+                <tr>
+                  <td>${escapeHtml(a.student_name)}</td>
+                  <td>${escapeHtml(a.exam_title)}</td>
+                  <td class="numeric">${a.score} / ${a.total_marks}</td>
+                  <td>${fmtDate(a.end_time)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>`;
+  })();
+</script>
+</body>
+</html>

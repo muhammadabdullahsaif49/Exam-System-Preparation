@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>My Results · ExamHall</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+<header class="site-header" id="site-header"></header>
+<main class="page">
+  <div class="page-head">
+    <div>
+      <span class="eyebrow">Student</span>
+      <h1>My results</h1>
+    </div>
+  </div>
+  <div id="results-list"></div>
+</main>
+<footer class="site-footer"><span>ExamHall — Online Examination System</span></footer>
+
+<script src="/api.js"></script>
+<script>
+  (async () => {
+    const me = await initPage('student');
+    if (!me) return;
+
+    const { results } = await apiGet('/api/results');
+    const el = document.getElementById('results-list');
+
+    if (results.length === 0) {
+      el.innerHTML = `
+        <div class="card empty-state">
+          <h3>No completed tests yet</h3>
+          <p>Once you finish an exam, it will show up here.</p>
+          <a class="btn btn--gold" href="/index.html" style="margin-top:12px;">Browse exams</a>
+        </div>`;
+      return;
+    }
+
+    el.innerHTML = `
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Exam</th><th class="numeric">Score</th><th class="numeric">Percent</th><th>Completed</th><th></th></tr></thead>
+            <tbody>
+              ${results.map((r) => {
+                const pct = r.total_marks > 0 ? Math.round((r.score / r.total_marks) * 100) : 0;
+                return `
+                  <tr>
+                    <td>${escapeHtml(r.title)}</td>
+                    <td class="numeric">${r.score} / ${r.total_marks}</td>
+                    <td class="numeric"><span class="pill ${pct >= 50 ? 'pill--green' : 'pill--red'}">${pct}%</span></td>
+                    <td>${fmtDate(r.end_time)}</td>
+                    <td><a class="btn btn--outline btn--sm" href="/result.html?attempt=${r.id}">View</a></td>
+                  </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>`;
+  })();
+</script>
+</body>
+</html>

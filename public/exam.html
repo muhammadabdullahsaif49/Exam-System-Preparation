@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Taking test · ExamHall</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+<header class="site-header" id="site-header"></header>
+<main class="page" id="page-content">
+  <p>Loading exam…</p>
+</main>
+<footer class="site-footer"><span>ExamHall — Online Examination System</span></footer>
+
+<script src="/api.js"></script>
+<script>
+  (async () => {
+    const me = await initPage('student');
+    if (!me) return;
+
+    const params = new URLSearchParams(window.location.search);
+    const attemptId = params.get('attempt');
+    if (!attemptId) { window.location.href = '/index.html'; return; }
+
+    let state;
+    try {
+      state = await apiGet(`/api/attempts/${attemptId}`);
+    } catch (err) {
+      document.getElementById('page-content').innerHTML = `<div class="card empty-state"><h3>${escapeHtml(err.message)}</h3></div>`;
+      return;
+    }
+
+    if (state.status === 'completed') {
+      window.location.href = `/result.html?attempt=${attemptId}`;
+      return;
+    }
+
+    const { exam, questions, answers, remainingSeconds } = state;
+    let remaining = remainingSeconds;
+
+    const content = document.getElementById('page-content');
+    content.innerHTML = `
+      <div class="page-head">
+        <div>
+          <span class="eyebrow">${exam.duration_minutes}-minute test</span>
+          <h1>${escapeHtml(exam.title)}</h1>
+        </div>
+      </div>
+      <div class="exam-shell">
+        <div id="questions-col"></div>
+        <aside class="exam-timer">
+          <div class="exam-timer__label">Time remaining</div>
+          <div class="exam-timer__value" id="timer-display">--:--</div>
+          <div class="exam-progress">
+            <span id="progress-label">0 / ${questions.length} answered</span>
+            <div class="exam-progress-bar"><div class="exam-progress-bar__fill" id="progress-fill"></div></div>
+          </div>
+        </aside>
+      </div>
+    `;
+
+    const questionsCol = document.getElementById('questions-col');
+    questionsCol.innerHTML = questions.map((q, i) => `
+      <div class="q-card" data-qid="${q.id}">
+        <div class="q-card__head">
+          <span class="q-card__number">Question ${i + 1} of ${questions.length}</span>
+          <span class="q-card__marks">1 mark</span>
+        </div>
+        <div class="q-card__text">${escapeHtml(q.question_text)}</div>
+        <div class="bubble-options">
+          ${['A', 'B', 'C', 'D'].map((letter) => {
+            const text = q['option_' + letter.toLowerCase()];
+            const checked = answers[q.id] === letter;
+            return `
+              <label class="bubble-option ${checked ? 'is-selected' : ''}">
+                <input type="radio" name="q_${q.id}" value="${letter}" ${checked ? 'checked' : ''} data-question-id="${q.id}" />
+                <span class="bubble-option__letter">${letter}</span>
+                <span class="bubble-option__text">${escapeHtml(text)}</span>
+              </label>`;
+          }).join('')}
+        </div>
+      </div>
+    `).join('') + `
+      <div class="exam-submit-bar">
+        <button type="button" class="btn btn--gold btn--block" id="submit-btn">Submit test</button>
+      </div>
+    `;
+
+    const timerDisplay = document.getElementById('timer-display');
+    const progressLabel = document.getElementById('progress-label');
+    const progressFill = document.getElementById('progress-fill');
+
+    function formatTime(totalSeconds) {
+      const s = Math.max(0, totalSeconds);
+      const m = Math.floor(s / 60).toString().padStart(2, '0');
+      const sec = Math.floor(s % 60).toString().padStart(2, '0');
+      return `${m}:${sec}`;
+    }
+
+    function updateProgress() {
+      const answered = document.querySelectorAll('.bubble-option input:checked').length;
+      progressLabel.textContent = `${answered} / ${questions.length} answered`;
+      progressFill.style.width = `${Math.round((answered / questions.length) * 100)}%`;
+    }
+
+    let submitting = false;
+    async function submitExam(confirmFirst) {
+      if (submitting) return;
+      if (confirmFirst) {
+        const answered = document.querySelectorAll('.bubble-option input:checked').length;
+        if (answered < questions.length) {
+          const ok = confirm(`You have answered ${answered} of ${questions.length} questions. Submit anyway?`);
+          if (!ok) return;
+        }
+      }
+      submitting = true;
+      const btn = document.getElementById('submit-btn');
+      if (btn) { btn.disabled = true; btn.textContent = 'Submitting…'; }
+      clearInterval(timerInterval);
+      try {
+        await apiPost(`/api/attempts/${attemptId}/submit`);
+      } catch (err) {
+        // even if this fails, try to route to result page — server may have already graded on expiry
+      }
+      window.location.href = `/result.html?attempt=${attemptId}`;
+    }
+
+    function tick() {
+      timerDisplay.textContent = formatTime(remaining);
+      if (remaining <= 60) timerDisplay.classList.add('exam-timer--low');
+      if (remaining <= 0) {
+        submitExam(false);
+        return;
+      }
+      remaining -= 1;
+    }
+    tick();
+    const timerInterval = setInterval(tick, 1000);
+
+    questionsCol.querySelectorAll('.bubble-option input[type="radio"]').forEach((input) => {
+      input.addEventListener('change', () => {
+        const card = input.closest('.q-card');
+        card.querySelectorAll('.bubble-option').forEach((opt) => opt.classList.remove('is-selected'));
+        input.closest('.bubble-option').classList.add('is-selected');
+        updateProgress();
+        apiPost(`/api/attempts/${attemptId}/answer`, {
+          question_id: Number(input.dataset.questionId),
+          selected_option: input.value,
+        }).catch(() => { /* best-effort auto-save; final grading happens on submit */ });
+      });
+    });
+
+    document.getElementById('submit-btn').addEventListener('click', () => submitExam(true));
+    updateProgress();
+  })();
+</script>
+</body>
+</html>

@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Question form · ExamHall</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+<header class="site-header" id="site-header"></header>
+<main class="page">
+  <div class="page-head">
+    <div>
+      <span class="eyebrow">Admin</span>
+      <h1 id="page-title">Add Question</h1>
+    </div>
+    <a class="btn btn--outline" href="/admin-questions.html">Back to bank</a>
+  </div>
+
+  <div class="card page--medium" style="margin: 0 auto;">
+    <div id="error-box" class="form-alert" style="display:none;"></div>
+
+    <form id="question-form">
+      <div class="field">
+        <label for="question_text">Question</label>
+        <textarea id="question_text" required></textarea>
+      </div>
+
+      <div class="field"><label for="option_a">Option A</label><input type="text" id="option_a" required /></div>
+      <div class="field"><label for="option_b">Option B</label><input type="text" id="option_b" required /></div>
+      <div class="field"><label for="option_c">Option C</label><input type="text" id="option_c" required /></div>
+      <div class="field"><label for="option_d">Option D</label><input type="text" id="option_d" required /></div>
+
+      <div class="field">
+        <label for="correct_option">Correct option</label>
+        <select id="correct_option" required>
+          <option value="">Select the correct option…</option>
+          <option value="A">A</option>
+          <option value="B">B</option>
+          <option value="C">C</option>
+          <option value="D">D</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="category">Subject</label>
+        <input type="text" id="category" list="subjects-datalist" placeholder="Pick or type a subject" required />
+        <datalist id="subjects-datalist"></datalist>
+        <div class="hint">Choose an existing subject, or type a new one. <a href="/admin-subjects.html">Manage subjects</a></div>
+      </div>
+
+      <div class="field">
+        <label for="difficulty">Difficulty</label>
+        <select id="difficulty">
+          <option value="Easy">Easy</option>
+          <option value="Medium" selected>Medium</option>
+          <option value="Hard">Hard</option>
+        </select>
+      </div>
+
+      <button class="btn btn--gold btn--block" type="submit" id="save-btn">Save question</button>
+    </form>
+  </div>
+</main>
+<footer class="site-footer"><span>ExamHall — Online Examination System</span></footer>
+
+<script src="/api.js"></script>
+<script>
+  (async () => {
+    const me = await initPage('admin');
+    if (!me) return;
+
+    const params = new URLSearchParams(window.location.search);
+    const questionId = params.get('id');
+    const prefillSubject = params.get('subject');
+
+    const { subjects } = await apiGet('/api/subjects');
+    document.getElementById('subjects-datalist').innerHTML = subjects.map((s) => `<option value="${escapeHtml(s.name)}"></option>`).join('');
+    if (prefillSubject && !questionId) {
+      document.getElementById('category').value = prefillSubject;
+    }
+
+    if (questionId) {
+      document.getElementById('page-title').textContent = 'Edit Question';
+      const { questions } = await apiGet('/api/admin/questions');
+      const q = questions.find((x) => String(x.id) === questionId);
+      if (q) {
+        document.getElementById('question_text').value = q.question_text;
+        document.getElementById('option_a').value = q.option_a;
+        document.getElementById('option_b').value = q.option_b;
+        document.getElementById('option_c').value = q.option_c;
+        document.getElementById('option_d').value = q.option_d;
+        document.getElementById('correct_option').value = q.correct_option;
+        document.getElementById('category').value = q.category;
+        document.getElementById('difficulty').value = q.difficulty;
+      }
+    }
+
+    document.getElementById('question-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const errorBox = document.getElementById('error-box');
+      errorBox.style.display = 'none';
+
+      const payload = {
+        question_text: document.getElementById('question_text').value,
+        option_a: document.getElementById('option_a').value,
+        option_b: document.getElementById('option_b').value,
+        option_c: document.getElementById('option_c').value,
+        option_d: document.getElementById('option_d').value,
+        correct_option: document.getElementById('correct_option').value,
+        category: document.getElementById('category').value,
+        difficulty: document.getElementById('difficulty').value,
+      };
+
+      const btn = document.getElementById('save-btn');
+      btn.disabled = true;
+      btn.textContent = 'Saving…';
+
+      try {
+        if (questionId) {
+          await apiPut(`/api/admin/questions/${questionId}`, payload);
+        } else {
+          await apiPost('/api/admin/questions', payload);
+        }
+        window.location.href = '/admin-questions.html';
+      } catch (err) {
+        errorBox.textContent = err.message;
+        errorBox.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = 'Save question';
+      }
+    });
+  })();
+</script>
+</body>
+</html>

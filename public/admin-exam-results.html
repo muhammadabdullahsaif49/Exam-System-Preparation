@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Exam Results · ExamHall</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+<header class="site-header" id="site-header"></header>
+<main class="page" id="page-content">
+  <p>Loading…</p>
+</main>
+<footer class="site-footer"><span>ExamHall — Online Examination System</span></footer>
+
+<script src="/api.js"></script>
+<script>
+  (async () => {
+    const me = await initPage('admin');
+    if (!me) return;
+
+    const params = new URLSearchParams(window.location.search);
+    const examId = params.get('id');
+    if (!examId) { window.location.href = '/admin-exams.html'; return; }
+
+    const content = document.getElementById('page-content');
+    let data;
+    try {
+      data = await apiGet(`/api/admin/exams/${examId}/results`);
+    } catch (err) {
+      content.innerHTML = `<div class="card empty-state"><h3>${escapeHtml(err.message)}</h3></div>`;
+      return;
+    }
+
+    const { exam, attempts } = data;
+
+    function exportCsv() {
+      const rows = [['Rank', 'Student', 'Email', 'Score', 'Total', 'Percent', 'Completed']];
+      attempts.forEach((a, i) => {
+        const pct = a.total_marks > 0 ? Math.round((a.score / a.total_marks) * 100) : 0;
+        rows.push([i + 1, a.student_name, a.student_email, a.score, a.total_marks, `${pct}%`, fmtDate(a.end_time)]);
+      });
+      const csv = rows.map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${exam.title.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}-results.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    content.innerHTML = `
+      <div class="page-head">
+        <div>
+          <span class="eyebrow">Admin · ${escapeHtml(exam.title)}</span>
+          <h1>Results</h1>
+          <p>${attempts.length} completed attempt${attempts.length === 1 ? '' : 's'}</p>
+        </div>
+        <div class="btn-row">
+          ${attempts.length > 0 ? `<button class="btn btn--outline" id="export-csv-btn">Export CSV</button>` : ''}
+          <a class="btn btn--outline" href="/admin-exams.html">Back to exams</a>
+        </div>
+      </div>
+      ${attempts.length === 0 ? `
+        <div class="card empty-state">
+          <h3>No attempts yet</h3>
+          <p>Results will appear here once students complete this exam.</p>
+        </div>` : `
+        <div class="card">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Rank</th><th>Student</th><th>Email</th><th class="numeric">Score</th><th class="numeric">Percent</th><th>Completed</th></tr></thead>
+              <tbody>
+                ${attempts.map((a, i) => {
+                  const pct = a.total_marks > 0 ? Math.round((a.score / a.total_marks) * 100) : 0;
+                  return `
+                    <tr>
+                      <td class="numeric">#${i + 1}</td>
+                      <td>${escapeHtml(a.student_name)}</td>
+                      <td>${escapeHtml(a.student_email)}</td>
+                      <td class="numeric">${a.score} / ${a.total_marks}</td>
+                      <td class="numeric"><span class="pill ${pct >= 50 ? 'pill--green' : 'pill--red'}">${pct}%</span></td>
+                      <td>${fmtDate(a.end_time)}</td>
+                    </tr>`;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>`}
+    `;
+
+    const exportBtn = document.getElementById('export-csv-btn');
+    if (exportBtn) exportBtn.addEventListener('click', exportCsv);
+  })();
+</script>
+</body>
+</html>

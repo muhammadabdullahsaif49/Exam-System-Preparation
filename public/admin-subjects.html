@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Subjects · ExamHall</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+<header class="site-header" id="site-header"></header>
+<main class="page">
+  <div class="page-head">
+    <div>
+      <span class="eyebrow">Admin</span>
+      <h1>Subjects</h1>
+      <p>Create a subject first, then add questions or build a quiz under it.</p>
+    </div>
+  </div>
+
+  <div class="card page--medium" style="margin-bottom: 24px;">
+    <div id="error-box" class="form-alert" style="display:none;"></div>
+    <form id="subject-form" style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap;">
+      <div class="field" style="flex:1; min-width:220px; margin-bottom:0;">
+        <label for="subject-name">New subject name</label>
+        <input type="text" id="subject-name" placeholder="e.g. Mathematics" required />
+      </div>
+      <button class="btn btn--gold" type="submit">+ Add subject</button>
+    </form>
+  </div>
+
+  <div id="subject-list"></div>
+</main>
+<footer class="site-footer"><span>ExamHall — Online Examination System</span></footer>
+
+<script src="/api.js"></script>
+<script>
+  (async () => {
+    const me = await initPage('admin');
+    if (!me) return;
+
+    async function load() {
+      const { subjects } = await apiGet('/api/subjects');
+      const el = document.getElementById('subject-list');
+
+      if (subjects.length === 0) {
+        el.innerHTML = `<div class="card empty-state"><h3>No subjects yet</h3><p>Add your first subject above — e.g. "Mathematics" or "Web Development".</p></div>`;
+        return;
+      }
+
+      el.innerHTML = subjects.map((s) => `
+        <div class="card exam-card">
+          <div>
+            <h3 style="margin-bottom:4px;">${escapeHtml(s.name)}</h3>
+            <div class="exam-card__meta">
+              <span>${s.question_count} question${s.question_count === 1 ? '' : 's'}</span>
+              <span>${s.exam_count} quiz${s.exam_count === 1 ? '' : 'zes'}</span>
+            </div>
+          </div>
+          <div class="btn-row" style="align-items:flex-start;">
+            <a class="btn btn--outline btn--sm" href="/admin-question-form.html?subject=${encodeURIComponent(s.name)}">+ Add question</a>
+            <a class="btn btn--outline btn--sm" href="/admin-exam-form.html?subject=${encodeURIComponent(s.name)}">+ Build quiz</a>
+            <button class="btn btn--danger btn--sm delete-btn" data-id="${s.id}" data-name="${escapeHtml(s.name)}">Delete</button>
+          </div>
+        </div>
+      `).join('');
+
+      el.querySelectorAll('.delete-btn').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          if (!confirm(`Delete subject "${btn.dataset.name}"? Existing questions/quizzes keep their subject label but it won't be selectable anymore.`)) return;
+          await apiDelete(`/api/admin/subjects/${btn.dataset.id}`);
+          load();
+        });
+      });
+    }
+
+    document.getElementById('subject-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const errorBox = document.getElementById('error-box');
+      errorBox.style.display = 'none';
+      const input = document.getElementById('subject-name');
+      try {
+        await apiPost('/api/admin/subjects', { name: input.value });
+        input.value = '';
+        load();
+      } catch (err) {
+        errorBox.textContent = err.message;
+        errorBox.style.display = 'block';
+      }
+    });
+
+    load();
+  })();
+</script>
+</body>
+</html>

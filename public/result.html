@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Result · ExamHall</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+<header class="site-header" id="site-header"></header>
+<main class="page" id="page-content">
+  <p>Loading result…</p>
+</main>
+<footer class="site-footer"><span>ExamHall — Online Examination System</span></footer>
+
+<script src="/api.js"></script>
+<script>
+  (async () => {
+    const me = await initPage('student');
+    if (!me) return;
+
+    const params = new URLSearchParams(window.location.search);
+    const attemptId = params.get('attempt');
+    if (!attemptId) { window.location.href = '/index.html'; return; }
+
+    const content = document.getElementById('page-content');
+    let data;
+    try {
+      data = await apiGet(`/api/attempts/${attemptId}/result`);
+    } catch (err) {
+      content.innerHTML = `<div class="card empty-state"><h3>${escapeHtml(err.message)}</h3></div>`;
+      return;
+    }
+
+    const { exam, attempt, details } = data;
+    const percent = attempt.total_marks > 0 ? Math.round((attempt.score / attempt.total_marks) * 100) : 0;
+
+    content.innerHTML = `
+      <div class="page-head">
+        <div>
+          <span class="eyebrow">Result</span>
+          <h1>${escapeHtml(exam.title)}</h1>
+        </div>
+        <a href="/index.html" class="btn btn--outline">Back to exams</a>
+      </div>
+
+      <div class="card result-hero">
+        <div class="eyebrow">Your score</div>
+        <div class="result-hero__score">${attempt.score} / ${attempt.total_marks}</div>
+        <div class="result-hero__percent ${percent >= 50 ? 'pass' : 'fail'}">${percent}%</div>
+      </div>
+
+      <hr class="section-divider" />
+      <h2>Answer review</h2>
+
+      ${details.map((d, i) => `
+        <div class="q-card">
+          <div class="q-card__head">
+            <span class="q-card__number">Question ${i + 1}</span>
+            <span class="pill ${d.is_correct ? 'pill--green' : (d.selected_option ? 'pill--red' : 'pill--gray')}">
+              ${d.is_correct ? 'Correct' : (d.selected_option ? 'Incorrect' : 'Skipped')}
+            </span>
+          </div>
+          <div class="q-card__text">${escapeHtml(d.question_text)}</div>
+          <div class="bubble-options">
+            ${['A', 'B', 'C', 'D'].map((letter) => {
+              const text = d['option_' + letter.toLowerCase()];
+              const isCorrectAnswer = d.correct_option === letter;
+              const isSelected = d.selected_option === letter;
+              let cls = '';
+              if (isCorrectAnswer) cls = 'is-correct';
+              else if (isSelected && !isCorrectAnswer) cls = 'is-wrong';
+              return `
+                <div class="bubble-option ${cls}">
+                  <span class="bubble-option__letter">${letter}</span>
+                  <span class="bubble-option__text">
+                    ${escapeHtml(text)}
+                    ${isSelected ? '<em style="font-style:normal; color:var(--graphite-60); font-size:.78rem;"> — your answer</em>' : ''}
+                  </span>
+                </div>`;
+            }).join('')}
+          </div>
+        </div>
+      `).join('')}
+    `;
+  })();
+</script>
+</body>
+</html>

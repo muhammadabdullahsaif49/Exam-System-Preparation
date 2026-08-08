@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Exams · ExamHall</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+<header class="site-header" id="site-header"></header>
+<main class="page">
+  <div class="page-head">
+    <div>
+      <span class="eyebrow">Admin</span>
+      <h1>Exams</h1>
+      <p id="count-label"></p>
+    </div>
+    <a class="btn btn--gold" href="/admin-exam-form.html">+ Create exam</a>
+  </div>
+  <div id="exam-list"></div>
+</main>
+<footer class="site-footer"><span>ExamHall — Online Examination System</span></footer>
+
+<script src="/api.js"></script>
+<script>
+  (async () => {
+    const me = await initPage('admin');
+    if (!me) return;
+
+    const { exams } = await apiGet('/api/admin/exams');
+    document.getElementById('count-label').textContent = `${exams.length} exam${exams.length === 1 ? '' : 's'} created`;
+
+    const el = document.getElementById('exam-list');
+    if (exams.length === 0) {
+      el.innerHTML = `
+        <div class="card empty-state">
+          <h3>No exams yet</h3>
+          <p>Create your first exam from the question bank.</p>
+          <a class="btn btn--gold" href="/admin-exam-form.html" style="margin-top:12px;">+ Create exam</a>
+        </div>`;
+      return;
+    }
+
+    el.innerHTML = exams.map((exam) => `
+      <div class="card exam-card">
+        <div>
+          <div style="margin-bottom:6px;">
+            <span class="pill ${exam.is_published ? 'pill--green' : 'pill--gray'}">${exam.is_published ? 'Published' : 'Draft'}</span>
+            <span class="pill pill--gold">${escapeHtml(exam.subject || 'General')}</span>
+            <span class="pill pill--gray">${escapeHtml(exam.difficulty || 'Medium')}</span>
+          </div>
+          <h3 style="margin-bottom:4px;">${escapeHtml(exam.title)}</h3>
+          <p style="margin:0; color:var(--graphite-60); max-width:520px;">${escapeHtml(exam.description)}</p>
+          <div class="exam-card__meta">
+            <span>${exam.question_count} questions</span>
+            <span>${exam.duration_minutes} min</span>
+            <span>${exam.attempt_count} completed attempt${exam.attempt_count === 1 ? '' : 's'}</span>
+          </div>
+        </div>
+        <div class="btn-row" style="align-items:flex-start;">
+          <a class="btn btn--outline btn--sm" href="/admin-exam-results.html?id=${exam.id}">Results</a>
+          <a class="btn btn--outline btn--sm" href="/admin-exam-form.html?id=${exam.id}">Edit</a>
+          <button class="btn btn--danger btn--sm delete-btn" data-id="${exam.id}">Delete</button>
+        </div>
+      </div>
+    `).join('');
+
+    el.querySelectorAll('.delete-btn').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        if (!confirm('Delete this exam and all its attempts?')) return;
+        await apiDelete(`/api/admin/exams/${btn.dataset.id}`);
+        window.location.reload();
+      });
+    });
+  })();
+</script>
+</body>
+</html>
