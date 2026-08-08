@@ -1,0 +1,263 @@
+{
+  "nextId": {
+    "users": 5,
+    "questions": 13,
+    "exams": 2,
+    "attempts": 1,
+    "subjects": 6,
+    "mcq_sets": 1
+  },
+  "users": [
+    {
+      "id": 1,
+      "name": "Admin",
+      "email": "admin@exam.com",
+      "role": "admin",
+      "salt": "919f8869fb7cf9c52d1e3b47ca6791e1",
+      "passwordHash": "dc6d67119c9f1ff6a42c3a0a3eee88d32465532933c46710ca0bf3f33a4c44cf1b60406d2c45f6d3060632d8b2fff81c8fde7cad552dc666addef2ea048e4f0a",
+      "createdAt": "2026-08-08T20:03:53.933Z"
+    },
+    {
+      "id": 2,
+      "name": "Demo Student",
+      "email": "student@exam.com",
+      "role": "student",
+      "salt": "f68deb16a1ccb8be43fb558cc7b1bfd8",
+      "passwordHash": "a89589cbba39e623f36b3976561805da998f99b06479da5223136b8593989d24642c52e8cfd0932e4e32b748504b3611b2364744d5939d648b9909f4e2435a51",
+      "createdAt": "2026-08-08T20:03:54.008Z"
+    },
+    {
+      "id": 3,
+      "name": "StoryBitesX",
+      "email": "storybitesx@gmail.com",
+      "role": "student",
+      "salt": "c6b8956e1a82661eecf608a20cce1c5f",
+      "passwordHash": "f9ce1f6cedb83d0537b8714aad9b634e7003f3be557b2018ee8d4a702f8a479dc8c65911b0581aa0c6b6d6258644f78ef2b0c18cb9de29bd859286b4dc4a99a9",
+      "createdAt": "2026-08-08T20:04:19.677Z"
+    },
+    {
+      "id": 4,
+      "name": "ahmad",
+      "email": "ahmad@gmail.com",
+      "role": "admin",
+      "salt": "cdb8f915a62af08b849a2bbc074493a2",
+      "passwordHash": "1b2da55e0e7e1cc0a9436611dfeac10085fddf78b48b58589e223d6143346aca30da39e931cc4b0e92b8b73f742155fd0b8d673e21fbcb45688001b0d42ce5f1",
+      "createdAt": "2026-08-08T20:05:11.692Z"
+    }
+  ],
+  "subjects": [
+    {
+      "id": 1,
+      "name": "Web Development",
+      "created_by": 1,
+      "createdAt": "2026-08-08T20:03:54.009Z"
+    },
+    {
+      "id": 2,
+      "name": "PHP",
+      "created_by": 1,
+      "createdAt": "2026-08-08T20:03:54.009Z"
+    },
+    {
+      "id": 3,
+      "name": "Database",
+      "created_by": 1,
+      "createdAt": "2026-08-08T20:03:54.009Z"
+    },
+    {
+      "id": 4,
+      "name": "Computer Science",
+      "created_by": 1,
+      "createdAt": "2026-08-08T20:03:54.009Z"
+    },
+    {
+      "id": 5,
+      "name": "Node.js",
+      "created_by": 1,
+      "createdAt": "2026-08-08T20:03:54.009Z"
+    }
+  ],
+  "questions": [
+    {
+      "id": 1,
+      "question_text": "What does HTML stand for?",
+      "option_a": "Hyper Trainer Marking Language",
+      "option_b": "Hyper Text Markup Language",
+      "option_c": "Hyper Text Marketing Language",
+      "option_d": "Hyper Tool Multi Language",
+      "correct_option": "B",
+      "category": "Web Development",
+      "difficulty": "Easy",
+      "created_by": 1,
+      "createdAt": "2026-08-08T20:03:54.009Z"
+    },
+    {
+      "id": 2,
+      "question_text": "Which CSS property controls text size?",
+      "option_a": "font-weight",
+      "option_b": "text-style",
+      "option_c": "font-size",
+      "option_d": "text-size",
+      "correct_option": "C",
+      "category": "Web Development",
+      "difficulty": "Easy",
+      "created_by": 1,
+      "createdAt": "2026-08-08T20:03:54.009Z"
+    },
+    {
+      "id": 3,
+      "question_text": "Which of these is NOT a JavaScript data type?",
+      "option_a": "Number",
+      "option_b": "Boolean",
+      "option_c": "Float",
+      "option_d": "String",
+      "correct_option": "C",
+      "category": "Web Development",
+      "difficulty": "Medium",
+      "created_by": 1,
+      "createdAt": "2026-08-08T20:03:54.009Z"
+    },
+    {
+      "id": 4,
+      "question_text": "In PHP, which symbol is used to declare a variable?",
+      "option_a": "@",
+      "option_b": "$",
+      "option_c": "#",
+      "option_d": "&",
+      "correct_option": "B",
+      "category": "PHP",
+      "difficulty": "Easy",
+      "created_by": 1,
+      "createdAt": "2026-08-08T20:03:54.009Z"
+    },
+    {
+      "id": 5,
+      "question_text": "Which SQL statement is used to extract data from a database?",
+      "option_a": "GET",
+      "option_b": "OPEN",
+      "option_c": "SELECT",
+      "option_d": "EXTRACT",
+      "correct_option": "C",
+      "category": "Database",
+      "difficulty": "Easy",
+      "created_by": 1,
+      "createdAt": "2026-08-08T20:03:54.009Z"
+    },
+    {
+      "id": 6,
+      "question_text": "What does SQL stand for?",
+      "option_a": "Structured Query Language",
+      "option_b": "Strong Question Language",
+      "option_c": "Structured Question Logic",
+      "option_d": "Simple Query Language",
+      "correct_option": "A",
+      "category": "Database",
+      "difficulty": "Easy",
+      "created_by": 1,
+      "createdAt": "2026-08-08T20:03:54.009Z"
+    },
+    {
+      "id": 7,
+      "question_text": "Which HTTP method is typically used to update a resource?",
+      "option_a": "GET",
+      "option_b": "PUT",
+      "option_c": "DELETE",
+      "option_d": "FETCH",
+      "correct_option": "B",
+      "category": "Web Development",
+      "difficulty": "Medium",
+      "created_by": 1,
+      "createdAt": "2026-08-08T20:03:54.009Z"
+    },
+    {
+      "id": 8,
+      "question_text": "What is the time complexity of binary search?",
+      "option_a": "O(n)",
+      "option_b": "O(n log n)",
+      "option_c": "O(log n)",
+      "option_d": "O(1)",
+      "correct_option": "C",
+      "category": "Computer Science",
+      "difficulty": "Medium",
+      "created_by": 1,
+      "createdAt": "2026-08-08T20:03:54.009Z"
+    },
+    {
+      "id": 9,
+      "question_text": "Which of these is a NoSQL database?",
+      "option_a": "MySQL",
+      "option_b": "PostgreSQL",
+      "option_c": "MongoDB",
+      "option_d": "SQLite",
+      "correct_option": "C",
+      "category": "Database",
+      "difficulty": "Easy",
+      "created_by": 1,
+      "createdAt": "2026-08-08T20:03:54.009Z"
+    },
+    {
+      "id": 10,
+      "question_text": "In Node.js, which module creates a web server?",
+      "option_a": "fs",
+      "option_b": "http",
+      "option_c": "path",
+      "option_d": "os",
+      "correct_option": "B",
+      "category": "Node.js",
+      "difficulty": "Medium",
+      "created_by": 1,
+      "createdAt": "2026-08-08T20:03:54.009Z"
+    },
+    {
+      "id": 11,
+      "question_text": "Which company developed Java?",
+      "option_a": "Microsoft",
+      "option_b": "Sun Microsystems",
+      "option_c": "Apple",
+      "option_d": "IBM",
+      "correct_option": "B",
+      "category": "Computer Science",
+      "difficulty": "Medium",
+      "created_by": 1,
+      "createdAt": "2026-08-08T20:03:54.009Z"
+    },
+    {
+      "id": 12,
+      "question_text": "What does API stand for?",
+      "option_a": "Application Programming Interface",
+      "option_b": "Advanced Programming Interface",
+      "option_c": "Application Process Integration",
+      "option_d": "Automated Program Interaction",
+      "correct_option": "A",
+      "category": "Computer Science",
+      "difficulty": "Easy",
+      "created_by": 1,
+      "createdAt": "2026-08-08T20:03:54.009Z"
+    }
+  ],
+  "exams": [
+    {
+      "id": 1,
+      "title": "Web Development Fundamentals",
+      "description": "A quick quiz covering HTML, CSS, JS, PHP and databases.",
+      "subject": "Web Development",
+      "difficulty": "Medium",
+      "duration_minutes": 15,
+      "is_published": true,
+      "question_ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "created_by": 1,
+      "createdAt": "2026-08-08T20:03:54.009Z"
+    }
+  ],
+  "attempts": [],
+  "mcq_sets": []
+}
